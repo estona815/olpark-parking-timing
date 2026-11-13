@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>올팍 주차 타이밍 · Olympic Park Parking Timing</title>
+<meta name="description" content="한국체육산업개발 공공데이터로 만든 올림픽공원 공연일·주말 주차 혼잡 예보와 주차구역 추천">
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--ink:#14213d;--sub:#5b6573;--line:#e3e8ef;--acc:#1f6fe0;--ok:#2e9e5b;--mid:#e0a100;--hi:#e06a1f;--max:#d23b3b}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1520;--card:#182131;--ink:#e8eef7;--sub:#9aa7b8;--line:#2a3547;--acc:#6aa8ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+header{padding:20px 16px 8px;max-width:960px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+h1{font-size:22px;margin:0}h1 small{display:block;font-size:13px;color:var(--sub);font-weight:500}
+main{max-width:960px;margin:auto;padding:0 16px 40px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+label{font-size:13px;color:var(--sub);display:grid;gap:4px}
+input,select,button{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button{cursor:pointer}button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+.grade{font-size:28px;font-weight:800}.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;color:#fff}
+.g0{background:var(--ok)}.g1{background:var(--mid)}.g2{background:var(--hi)}.g3{background:var(--max)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+ul{margin:6px 0;padding-left:18px}.lots{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.lot{border:1px solid var(--line);border-radius:10px;padding:8px;font-size:14px}.lot b{font-size:16px}
+.shows li{cursor:pointer;margin:4px 0}.shows li:hover{color:var(--acc)}
+svg text{fill:var(--sub);font-size:10px}footer{max-width:960px;margin:auto;padding:0 16px 40px;color:var(--sub);font-size:12px}
+.muted{color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span data-k="title">올팍 주차 타이밍</span><small data-k="sub">공연날·주말, 언제 도착하고 어디에 세울까</small></h1>
+  <button id="lang" aria-label="language">EN</button>
+</header>
+<main>
+  <section class="card">
+    <div class="row">
+      <label><span data-k="date">방문 날짜</span><input type="date" id="d"></label>
+      <label><span data-k="hour">도착 예정 시각</span><select id="h"></select></label>
+      <button class="pri" id="go" data-k="check">혼잡 예보 보기</button>
+    </div>
+    <div id="res" style="margin-top:14px"></div>
+  </section>
+  <section class="grid2">
+    <div class="card"><b data-k="curve">시간대별 평균 입차 대수</b><div class="muted" id="curveNote"></div><div id="chart"></div></div>
+    <div class="card"><b data-k="lotsT">이 시각 추천 주차구역</b><div class="muted" data-k="lotsNote">주차장 혼잡도 기록(원활·혼잡·만차)을 시간대별로 점수화한 순위</div><div class="lots" id="lots"></div></div>
+  </section>
+  <section class="card"><b data-k="showsT">다가오는 올림픽공원 공연</b> <span class="muted" id="showsNote" data-k="showsNote">(누르면 그 날짜로 예보)</span><ul class="shows" id="shows"></ul></section>
+</main>
+<footer>
+  <div data-k="src">데이터: 한국체육산업개발(주) 공공데이터(공공데이터포털) — 영문 공연정보(15149169), 주차장 혼잡도 정보(15164156), 월별주차현황(15131671), 올림픽공원 입출차 정보(15138735). 집계값만 사용하며 원자료를 재배포하지 않습니다.</div>
+  <div data-k="lim" style="margin-top:6px">한계: 입출차 자료는 2024년 7월 한 달, 혼잡도 자료는 기록 시점 표본입니다. 예보는 과거 패턴에 계절 지수를 곱한 참고값이며 실시간 정보가 아닙니다. 현장 안내와 대중교통(5호선 올림픽공원역·8호선 몽촌토성역) 이용을 우선해 주세요.</div>
+  <div style="margin-top:6px">2026년도 한국체육산업개발 공공데이터 활용 경진대회 출품작</div>
+</footer>
+<script>
+const T={ko:{},en:{title:"Olympic Park Parking Timing",sub:"On show days and weekends — when to arrive and where to park",date:"Visit date",hour:"Arrival time",check:"Show forecast",curve:"Average cars entering per hour",lotsT:"Recommended lots at this hour",lotsNote:"Ranked by recorded congestion (free · busy · full) at this hour",showsT:"Upcoming shows at Olympic Park",showsNote:"(tap to forecast that day)",src:"Data: Korea Sports Industry Development Co. open data (data.go.kr) — English performance info (15149169), parking congestion (15164156), monthly parking (15131671), Olympic Park entry/exit (15138735). Only aggregates are used.",lim:"Limits: entry/exit data covers July 2024 only; congestion data are sampled records. Forecasts are reference values (past pattern × seasonal index), not real-time. Public transit (Line 5 Olympic Park, Line 8 Mongchontoseong) is recommended."}};
+let L='ko',D;const $=id=>document.getElementById(id);
+const G={ko:["여유","보통","혼잡","매우 혼잡"],en:["Light","Moderate","Busy","Very busy"]};
+function applyLang(){document.querySelectorAll('[data-k]').forEach(e=>{const k=e.dataset.k;if(!T.ko[k])T.ko[k]=e.textContent;e.textContent=(L==='en'&&T.en[k])||T.ko[k]});$('lang').textContent=L==='ko'?'EN':'한국어';document.documentElement.lang=L;render()}
+$('lang').onclick=()=>{L=L==='ko'?'en':'ko';applyLang()};
+for(let h=7;h<=23;h++){const o=document.createElement('option');o.value=h;o.textContent=String(h).padStart(2,'0')+':00';$('h').appendChild(o)}
+function kind(ds){const s=D.shows.filter(x=>x.date===ds);const wd=new Date(ds+'T12:00').getDay();return {show:s,g:s.length?'show':(wd===0||wd===6?'weekend':'weekday')}}
+function forecast(ds,h){const k=kind(ds);const m=+ds.slice(5,7);const curve=D.hourly[k.g];const peak=Math.max(...D.hourly.show);const v=curve[h]*(D.season[m]||1);const r=v/peak;const g=r<.25?0:r<.5?1:r<.8?2:3;return {k,v,g,curve,m}}
+function bestArrival(curve,m){let best=null;for(let h=10;h<=18;h++){const v=curve[h];if(best===null||v<curve[best])best=h}return best}
+function chart(curve,h){const W=440,H=150,max=Math.max(...curve,1),bw=W/24;let s=`<svg viewBox="0 0 ${W} ${H+18}" width="100%" role="img" aria-label="hourly">`;curve.forEach((v,i)=>{const bh=v/max*H;s+=`<rect x="${i*bw+1}" y="${H-bh}" width="${bw-2}" height="${bh}" rx="2" fill="${i===h?'var(--acc)':'var(--line)'}"/>`;if(i%3===0)s+=`<text x="${i*bw}" y="${H+13}">${i}</text>`});return s+'</svg>'}
+function render(){if(!D)return;const ds=$('d').value,h=+$('h').value;const f=forecast(ds,h);const en=L==='en';
+ const typ={show:en?'Show day':'공연 있는 날',weekend:en?'Weekend':'주말',weekday:en?'Weekday':'평일'}[f.k.g];
+ const ba=bestArrival(f.curve,f.m);const stay=D.stayMedianMin[f.k.g==='show'?'show':'other'];
+ const ex=D.exitAfter17[f.k.g==='show'?'show':'other'];let exPeak=17;ex.forEach((v,i)=>{if(i>=17&&v>ex[exPeak])exPeak=i});
+ let tips=[];
+ if(f.g>=2)tips.push(en?`Arrive before ${String(Math.max(9,h-2)).padStart(2,'0')}:00 or use the subway.`:`${String(Math.max(9,h-2)).padStart(2,'0')}시 이전 도착 또는 지하철 이용을 권합니다.`);
+ tips.push(en?`Quietest arrival hour on a ${typ.toLowerCase()} (10–18h): ${ba}:00`:`${typ} 기준 가장 한산한 도착 시각(10~18시): ${ba}시`);
+ tips.push(en?`Typical stay: about ${stay} min · evening exit rush around ${exPeak}:00`:`평균적인 주차 시간 약 ${stay}분 · 저녁 출차 몰림은 ${exPeak}시 무렵`);
+ if(f.k.show.length)tips.push((en?'Show: ':'공연: ')+f.k.show.map(s=>s.title).join(' / '));
+ tips.push(en?`Seasonal index for month ${f.m}: ${D.season[f.m]} (1.0 = yearly average)`:`${f.m}월 계절 지수 ${D.season[f.m]} (연평균=1.0)`);
+ $('res').innerHTML=`<div><span class="pill g${f.g}">${typ}</span></div><div class="grade">${G[L][f.g]}</div><div class="muted">${en?'Expected entries this hour':'이 시간대 예상 입차'} ≈ ${Math.round(f.v)}${en?' cars':'대'}</div><ul>${tips.map(t=>`<li>${t}</li>`).join('')}</ul>`;
+ $('chart').innerHTML=chart(f.curve,h);$('curveNote').textContent=(en?'Pattern: ':'기준: ')+typ+(en?` (${D.ndays[f.k.g]} days, July 2024)`:` (2024년 7월 ${D.ndays[f.k.g]}일)`);
+ const lots=Object.entries(D.lots).map(([k,v])=>{let s=v.byHour[h];if(s===undefined){const hs=Object.keys(v.byHour).map(Number);const nh=hs.reduce((a,b)=>Math.abs(b-h)<Math.abs(a-h)?b:a,hs[0]);s=v.byHour[nh]}return [k,s,v]}).sort((a,b)=>a[1]-b[1]);
+ $('lots').innerHTML=lots.map(([k,s,v],i)=>`<div class="lot"><b>${i+1}. ${k}</b><br>${en?'score':'혼잡 점수'} ${s.toFixed(2)}<br><span class="muted">${en?'full':'만차 비율'} ${Math.round(v.full*100)}%</span></div>`).join('');
+ const today=new Date().toLocaleDateString('sv');const up=D.shows.filter(s=>s.date>=today).slice(0,12);
+ if(!up.length)$('showsNote').textContent=en?'(no upcoming dates in the current open data — showing the latest records; tap to see that day’s pattern)':'(현재 개방 데이터에 이후 일정이 없어 최근 기록을 보여줍니다 · 누르면 그날 기준 예보)';
+ $('shows').innerHTML=(up.length?up:D.shows.slice(-8).reverse()).map(s=>`<li data-d="${s.date}">${s.date} · ${s.title.replace(/</g,'&lt;')}</li>`).join('')||'<li>-</li>';
+ document.querySelectorAll('#shows li[data-d]').forEach(li=>li.onclick=()=>{$('d').value=li.dataset.d;$('h').value=17;render();scrollTo({top:0,behavior:'smooth'})});}
+$('go').onclick=render;$('d').onchange=render;$('h').onchange=render;
+fetch('data.json').then(r=>r.json()).then(j=>{D=j;$('d').value=new Date().toLocaleDateString('sv');$('h').value=15;applyLang()});
+</script>
+</body>
+</html>
